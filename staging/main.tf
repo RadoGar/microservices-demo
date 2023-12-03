@@ -6,10 +6,10 @@ resource "aws_security_group" "microservices-demo-staging-k8s" {
   name        = "microservices-demo-staging-k8s"
   description = "allow all internal traffic, all traffic from bastion and http from anywhere"
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    self        = "true"
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = "true"
   }
   ingress {
     from_port       = 0
@@ -29,10 +29,15 @@ resource "aws_security_group" "microservices-demo-staging-k8s" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  tags = {
+    git_org   = "RadoGar"
+    git_repo  = "microservices-demo"
+    yor_trace = "aa4908b9-1f32-4fe6-bd00-48b01a8b988a"
+  }
 }
 
 resource "aws_instance" "k8s-node" {
-  depends_on      = [ "aws_instance.k8s-master" ] 
+  depends_on      = ["aws_instance.k8s-master"]
   count           = "${var.nodecount}"
   instance_type   = "${var.node_instance_type}"
   ami             = "${lookup(var.aws_amis, var.aws_region)}"
@@ -66,6 +71,11 @@ resource "aws_instance" "k8s-node" {
     command = "ssh -i ${var.private_key_file} -o StrictHostKeyChecking=no ubuntu@${self.private_ip} sudo `cat join.cmd`"
   }
 
+  tags = {
+    git_org   = "RadoGar"
+    git_repo  = "microservices-demo"
+    yor_trace = "e4f4759c-37a2-48e8-ad6b-c237963fe1c4"
+  }
 }
 
 resource "aws_instance" "k8s-master" {
@@ -112,26 +122,36 @@ resource "aws_instance" "k8s-master" {
   provisioner "local-exec" {
     command = "scp -i ${var.private_key_file} -o StrictHostKeyChecking=no ubuntu@${self.private_ip}:~/config ~/.kube/"
   }
+  tags = {
+    git_org   = "RadoGar"
+    git_repo  = "microservices-demo"
+    yor_trace = "d70025f2-b3f1-4c0d-904e-ddb4db9e7a13"
+  }
 }
 
 resource "null_resource" "up" {
-  depends_on      = [ "aws_instance.k8s-node" ]
+  depends_on = ["aws_instance.k8s-node"]
   provisioner "local-exec" {
     command = "./up.sh ${var.weave_cloud_token}"
   }
 }
 
 resource "aws_elb" "microservices-demo-staging-k8s" {
-  depends_on = [ "aws_instance.k8s-node" ]
-  name = "microservices-demo-staging-k8s"
-  instances = ["${aws_instance.k8s-node.*.id}"]
+  depends_on         = ["aws_instance.k8s-node"]
+  name               = "microservices-demo-staging-k8s"
+  instances          = ["${aws_instance.k8s-node.*.id}"]
   availability_zones = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
-  security_groups = ["${aws_security_group.microservices-demo-staging-k8s.id}"]
+  security_groups    = ["${aws_security_group.microservices-demo-staging-k8s.id}"]
 
   listener {
-    lb_port = 80
-    instance_port = 30001
-    lb_protocol = "http"
+    lb_port           = 80
+    instance_port     = 30001
+    lb_protocol       = "http"
     instance_protocol = "http"
+  }
+  tags = {
+    git_org   = "RadoGar"
+    git_repo  = "microservices-demo"
+    yor_trace = "f61c12a2-0612-40a2-b1ee-833a54e91b4d"
   }
 }
